@@ -29,6 +29,7 @@
       margin: 20px auto;
       border-radius: 6px;
       text-align: left;
+      overflow-x: auto;
     }
     button {
       padding: 10px 16px;
@@ -38,6 +39,7 @@
       font-size: 15px;
       border-radius: 6px;
       cursor: pointer;
+      margin: 5px;
     }
     button:hover {
       background: #0056b3;
@@ -50,11 +52,14 @@
     <div class="g-recaptcha" data-sitekey="6LfIQvorAAAAAIxL4Q5aoIeyVlcyjRo0ODELOM-d"></div>
     <br/>
     <button id="submit-btn" type="button">Submit token to verifier</button>
+    <button id="download-btn" type="button">Download CSV</button>
   </form>
 
   <pre id="output"></pre>
 
   <script>
+    const metrics = [];
+
     document.getElementById('submit-btn').addEventListener('click', async () => {
       const token = grecaptcha.getResponse();
       if (!token) {
@@ -63,6 +68,7 @@
       }
 
       document.getElementById('output').textContent = "⏳ Sending token to verifier...";
+      const start = performance.now();
 
       try {
         const resp = await fetch('https://captcha-verifier-vanijain.vercel.app/api/verify', {
@@ -72,18 +78,53 @@
         });
 
         const json = await resp.json();
-        console.log(json);
+        const end = performance.now();
+        const latency = (end - start).toFixed(2);
 
         if (json.success) {
-          document.getElementById('output').textContent = "✅ Verification Successful!\n\n" + JSON.stringify(json, null, 2);
+          document.getElementById('output').textContent = 
+            "✅ Verification Successful!\n\n" + JSON.stringify(json, null, 2);
         } else {
-          document.getElementById('output').textContent = "❌ Verification Failed!\n\n" + JSON.stringify(json, null, 2);
+          document.getElementById('output').textContent = 
+            "❌ Verification Failed!\n\n" + JSON.stringify(json, null, 2);
         }
+
+        // Log metrics
+        metrics.push({
+          timestamp: new Date().toISOString(),
+          success: json.success ? "true" : "false",
+          hostname: json.hostname || "N/A",
+          challenge_ts: json.challenge_ts || "N/A",
+          score: json.score || "N/A",
+          latency_ms: latency
+        });
+
+        // Reset reCAPTCHA
+        grecaptcha.reset();
 
       } catch (e) {
         document.getElementById('output').textContent = 'Verifier call failed: ' + e;
       }
     });
+
+    document.getElementById('download-btn').addEventListener('click', () => {
+      if (metrics.length === 0) {
+        alert("No metrics recorded yet!");
+        return;
+      }
+
+      const headers = Object.keys(metrics[0]).join(",");
+      const rows = metrics.map(m => Object.values(m).join(","));
+      const csvContent = [headers, ...rows].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "captcha_metrics.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
   </script>
 </body>
 </html>
+
