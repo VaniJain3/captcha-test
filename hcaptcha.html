@@ -21,9 +21,15 @@
     <button id="submit-btn" type="button">Submit token to verifier</button>
   </form>
 
+  <!-- Hidden CSV button (appears after first result) -->
+  <button id="download-btn" style="display:none; margin-top:15px;">⬇️ Download CSV</button>
+
   <pre id="output"></pre>
 
   <script>
+    const _results = [];
+    const downloadBtn = document.getElementById('download-btn');
+
     document.getElementById('submit-btn').addEventListener('click', async () => {
       const token = hcaptcha.getResponse();
       if (!token) {
@@ -33,6 +39,7 @@
 
       document.getElementById('output').textContent = "⏳ Sending token to verifier...";
       try {
+        const start = performance.now();
         const resp = await fetch('https://captcha-verifier-vanijain.vercel.app/api/verify', {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
@@ -40,15 +47,57 @@
         });
 
         const json = await resp.json();
+        const latencyMs = (performance.now() - start).toFixed(2);
+
         if (json.success) {
           document.getElementById('output').textContent = "✅ Verification Successful!\n\n" + JSON.stringify(json, null, 2);
         } else {
           document.getElementById('output').textContent = "❌ Verification Failed!\n\n" + JSON.stringify(json, null, 2);
         }
+
+        // store metrics for CSV
+        _results.push({
+          timestamp: new Date().toISOString(),
+          provider: 'hcaptcha',
+          success: json.success ? 'true' : 'false',
+          hostname: json.hostname || 'N/A',
+          challenge_ts: json.challenge_ts || 'N/A',
+          latency_ms: latencyMs
+        });
+
+        if (_results.length > 0) downloadBtn.style.display = 'inline-block';
+
+        // reset the widget so it can be solved again
+        hcaptcha.reset();
+
       } catch (e) {
         document.getElementById('output').textContent = 'Verifier call failed: ' + e;
       }
     });
+
+    // CSV download logic
+    downloadBtn.addEventListener('click', () => {
+      if (_results.length === 0) {
+        alert('No metrics recorded yet.');
+        return;
+      }
+
+      const headers = ['timestamp','provider','success','hostname','challenge_ts','latency_ms'];
+      const csvLines = [headers.join(',')];
+      for (const r of _results) {
+        const vals = headers.map(h => `"${String(r[h] ?? '').replace(/"/g, '""')}"`);
+        csvLines.push(vals.join(','));
+      }
+
+      const blob = new Blob([csvLines.join('\n')], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'hcaptcha_metrics.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
   </script>
 </body>
 </html>
+
