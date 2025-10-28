@@ -24,7 +24,7 @@
       }
       document.getElementById('output').textContent = "Sending token to verifier...";
       try {
-        const resp = await fetch('https://<YOUR_VERCEL_PROJECT>.vercel.app/api/verify', {
+        const resp = await fetch('https://captcha-verifier-h7n50yg8i-vanijain030403-7044s-projects.vercel.app/api/verify', {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ token })
