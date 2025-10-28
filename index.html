@@ -68,7 +68,7 @@
         const resp = await fetch('https://captcha-verifier-kbwiv38uz-vanijain030403-7044s-projects.vercel.app/api/verify', {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ token })
+          body: JSON.stringify({ token, provider: 'google-v2' })
         });
 
         const json = await resp.json();
