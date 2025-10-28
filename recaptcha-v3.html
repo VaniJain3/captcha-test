@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>reCAPTCHA v3 Test</title>
+  <script src="https://www.google.com/recaptcha/api.js?render=6LdTY_orAAAAAB7jGOIvrkK4YvJ3YHqo6ykyKWUy"></script>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 60px; background: #f5f5f5; }
+    h1 { color: #333; }
+    button { padding: 10px 16px; border: none; background: #007bff; color: white; font-size: 15px; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    pre { background: #222; color: #0f0; padding: 10px; width: 80%; margin: 20px auto; border-radius: 6px; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>reCAPTCHA v3 Verification Test</h1>
+  <button id="verify-btn">Run reCAPTCHA v3 and Verify</button>
+  <pre id="output"></pre>
+
+  <script>
+    document.getElementById('verify-btn').addEventListener('click', async () => {
+      document.getElementById('output').textContent = "⏳ Getting token...";
+      grecaptcha.ready(async () => {
+        const token = await grecaptcha.execute('6LdTY_orAAAAAB7jGOIvrkK4YvJ3YHqo6ykyKWUy', { action: 'submit' });
+
+        document.getElementById('output').textContent = "⏳ Sending token to verifier...";
+        try {
+          const resp = await fetch('https://captcha-verifier-kbwiv38uz-vanijain030403-7044s-projects.vercel.app/api/verify', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ token, provider: 'google-v3' })
+          });
+          const json = await resp.json();
+          if (json.success) {
+            document.getElementById('output').textContent = "✅ Verification Successful!\n\n" + JSON.stringify(json, null, 2);
+          } else {
+            document.getElementById('output').textContent = "❌ Verification Failed!\n\n" + JSON.stringify(json, null, 2);
+          }
+        } catch (e) {
+          document.getElementById('output').textContent = 'Verifier call failed: ' + e;
+        }
+      });
+    });
+  </script>
+</body>
+</html>
